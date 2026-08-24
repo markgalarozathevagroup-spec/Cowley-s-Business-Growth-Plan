@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cowley Associates Operations Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-dark:  #166534;
+    --green-mid:   #16a34a;
+    --green-light: #f0fdf4;
+    --green-border:#86efac;
+    --text:        #1e293b;
+    --muted:       #64748b;
+    --card-bg:     #ffffff;
+    --page-bg:     #f8fafc;
+    --border:      #e2e8f0;
+    --radius:      12px;
+    --shadow:      0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+  }
+
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--page-bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--green-dark);
+    color: white;
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .topbar-left h1 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+  }
+  .topbar-left p {
+    font-size: 13px;
+    color: #bbf7d0;
+    margin-top: 2px;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .phase-badge {
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.3);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+  }
+  .date-label {
+    font-size: 13px;
+    color: #bbf7d0;
+  }
+  .mavis-tag {
+    font-size: 11px;
+    color: #86efac;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  /* ── PAGE LAYOUT ── */
+  .page { max-width: 1100px; margin: 0 auto; padding: 36px 24px 64px; }
+
+  /* ── PHASE PROGRESS ── */
+  .phase-tracker {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 36px;
+    margin-bottom: 28px;
+    border: 1px solid var(--border);
+  }
+  .phase-tracker h2 {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .phases {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .phase-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+  .phase-step::after {
+    content: '';
+    position: absolute;
+    top: 18px;
+    right: -50%;
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .phase-step:last-child::after { display: none; }
+  .phase-step.active::after { background: var(--green-border); }
+  .phase-dot {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    position: relative;
+    z-index: 1;
+    border: 3px solid var(--border);
+    background: var(--card-bg);
+    color: var(--muted);
+  }
+  .phase-step.active .phase-dot {
+    background: var(--green-dark);
+    border-color: var(--green-dark);
+    color: white;
+    box-shadow: 0 0 0 4px #bbf7d0;
+  }
+  .phase-step.done .phase-dot {
+    background: var(--green-mid);
+    border-color: var(--green-mid);
+    color: white;
+  }
+  .phase-step.upcoming .phase-dot {
+    background: #f1f5f9;
+    border-color: var(--border);
+    color: #94a3b8;
+  }
+  .phase-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .phase-step.upcoming .phase-label { color: var(--muted); }
+  .phase-days {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .phase-step.active .phase-days { color: var(--green-mid); font-weight: 600; }
+
+  /* ── STATS ROW ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+  }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--green-dark);
+    line-height: 1;
+  }
+  .stat-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .stat-card.highlight {
+    background: var(--green-light);
+    border-color: var(--green-border);
+  }
+  .stat-card.highlight .stat-value { color: var(--green-dark); }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  /* ── PILLARS ── */
+  .pillars-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--green-dark);
+    color: white;
+    padding: 16px 24px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .pillar-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pillar-row:last-child { border-bottom: none; }
+  .pillar-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--green-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .pillar-info { flex: 1; min-width: 0; }
+  .pillar-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .pillar-focus {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .status-pill {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .status-active   { background: #dcfce7; color: #166534; }
+  .status-setup    { background: #fef9c3; color: #854d0e; }
+  .status-pending  { background: #f1f5f9; color: #64748b; }
+
+  /* ── SIDEBAR ── */
+  .sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── PRIORITIES ── */
+  .priorities-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .priority-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .priority-item:last-child { border-bottom: none; }
+  .priority-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--green-dark);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .priority-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+
+  /* ── INTEGRATIONS ── */
+  .integrations-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .integration-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .integration-row:last-child { border-bottom: none; }
+  .int-name { font-weight: 600; color: var(--text); }
+  .int-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 6px;
+  }
+  .int-status {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .dot-green  { background: #22c55e; }
+  .dot-amber  { background: #f59e0b; }
+  .dot-gray   { background: #cbd5e1; }
+  .text-green { color: #16a34a; }
+  .text-amber { color: #b45309; }
+  .text-gray  { color: #94a3b8; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .main-grid  { grid-template-columns: 1fr; }
+    .topbar     { padding: 16px 20px; }
+    .page       { padding: 20px 16px 48px; }
+  }
+
+  @media print {
+    body { background: white; }
+    .topbar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  /* ── NEW BIZ SNAPSHOT ── */
+  .newbiz-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .newbiz-card .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .newbiz-card .card-header span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #86efac;
+    letter-spacing: .04em;
+    text-transform: none;
+  }
+  .newbiz-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+  }
+  .newbiz-stat {
+    padding: 20px 20px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .newbiz-stat:last-child { border-right: none; }
+  .newbiz-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .newbiz-value {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--green-dark);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .newbiz-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .newbiz-stat.highlight-stat {
+    background: var(--green-light);
+  }
+  .newbiz-stat.highlight-stat .newbiz-label { color: var(--green-mid); }
+
+  @media (max-width: 768px) {
+    .newbiz-grid { grid-template-columns: repeat(3, 1fr); }
+    .newbiz-stat { border-bottom: 1px solid var(--border); }
+  }
+
+
+  /* ── SNAPSHOT ROW (EA / AI / Agency) ── */
+  .snapshot-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .snapshot-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .snapshot-card .card-header {
+    font-size: 11px;
+    padding: 13px 18px;
+  }
+  .snapshot-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+  }
+  .snap-stat {
+    padding: 16px 18px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .snap-stat:nth-child(2n) { border-right: none; }
+  .snap-stat:nth-last-child(-n+2) { border-bottom: none; }
+  .snap-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .snap-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--green-dark);
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .snap-sub {
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .snap-stat.hl { background: var(--green-light); }
+  .snap-stat.hl .snap-label { color: var(--green-mid); }
+
+  @media (max-width: 768px) {
+    .snapshot-row { grid-template-columns: 1fr; }
+  }
+
+
+  /* ── CEO DASHBOARD CARD ── */
+  .ceo-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .ceo-card .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ceo-card .card-header span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #86efac;
+    letter-spacing: .04em;
+    text-transform: none;
+  }
+  .ceo-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+  }
+  .ceo-stat {
+    padding: 20px 18px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .ceo-stat:last-child { border-right: none; }
+  .ceo-icon {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .ceo-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .ceo-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--green-dark);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .ceo-sub {
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  .ceo-stat.ceo-hl {
+    background: var(--green-light);
+  }
+  .ceo-stat.ceo-alert {
+    background: #fff7ed;
+    border-right-color: #fed7aa;
+  }
+  .ceo-stat.ceo-alert .ceo-label { color: #9a3412; }
+  .ceo-stat.ceo-alert .ceo-value { color: #c2410c; }
+
+  @media (max-width: 768px) {
+    .ceo-grid { grid-template-columns: repeat(2, 1fr); }
+    .ceo-stat { border-bottom: 1px solid var(--border); }
+    .ceo-stat:last-child { grid-column: span 2; border-right: none; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>Cowley Associates Operations Dashboard</h1>
+    <p>Cowley Associates &nbsp;·&nbsp; EA & Business Development Overview</p>
+  </div>
+  <div class="topbar-right">
+    <span class="phase-badge">Phase 1 &nbsp;·&nbsp; BUILD</span>
+    <span class="date-label">Week of Aug 21, 2026</span>
+    <span class="mavis-tag">Powered by MAVIS</span>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- CEO DASHBOARD CARD -->
+  <div class="ceo-card">
+    <div class="card-header">
+      <span>📊 CEO Dashboard — Monday Morning Briefing</span>
+      <span>Delivered every Monday by MAVIS</span>
+    </div>
+    <div class="ceo-grid">
+      <div class="ceo-stat ceo-hl">
+        <div class="ceo-icon">🎯</div>
+        <div class="ceo-label">New Business</div>
+        <div class="ceo-value">0</div>
+        <div class="ceo-sub">Pipeline updates this week</div>
+      </div>
+      <div class="ceo-stat">
+        <div class="ceo-icon">🗓️</div>
+        <div class="ceo-label">Your Time</div>
+        <div class="ceo-value">0</div>
+        <div class="ceo-sub">Decisions to make</div>
+      </div>
+      <div class="ceo-stat">
+        <div class="ceo-icon">🏢</div>
+        <div class="ceo-label">Agency</div>
+        <div class="ceo-value">0</div>
+        <div class="ceo-sub">Deadlines this week</div>
+      </div>
+      <div class="ceo-stat">
+        <div class="ceo-icon">🤖</div>
+        <div class="ceo-label">AI / Ops</div>
+        <div class="ceo-value">0</div>
+        <div class="ceo-sub">New automations built</div>
+      </div>
+      <div class="ceo-stat ceo-alert">
+        <div class="ceo-icon">⚡</div>
+        <div class="ceo-label">CEO Attention Required</div>
+        <div class="ceo-value">0</div>
+        <div class="ceo-sub">Items only you can decide</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE TRACKER -->
+  <div class="phase-tracker">
+    <h2>90-Day Roadmap — Current Status</h2>
+    <div class="phases">
+      <div class="phase-step active">
+        <div class="phase-dot">🔨</div>
+        <div class="phase-label">BUILD</div>
+        <div class="phase-days">Days 1–30 · Active</div>
+      </div>
+      <div class="phase-step upcoming">
+        <div class="phase-dot">⚙️</div>
+        <div class="phase-label">RUN</div>
+        <div class="phase-days">Days 31–60</div>
+      </div>
+      <div class="phase-step upcoming">
+        <div class="phase-dot">📈</div>
+        <div class="phase-label">OPTIMIZE</div>
+        <div class="phase-days">Days 61–90</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- NEW BIZ SNAPSHOT -->
+  <div class="newbiz-card">
+    <div class="card-header">
+      <span>🎯 New Business Development — Weekly Snapshot</span>
+      <span>Update every Monday</span>
+    </div>
+    <div class="newbiz-grid">
+      <div class="newbiz-stat highlight-stat">
+        <div class="newbiz-label">Prospects<br>Added</div>
+        <div class="newbiz-value">0</div>
+        <div class="newbiz-sub">This week</div>
+      </div>
+      <div class="newbiz-stat">
+        <div class="newbiz-label">Outreach<br>Sent</div>
+        <div class="newbiz-value">0</div>
+        <div class="newbiz-sub">Emails + LinkedIn</div>
+      </div>
+      <div class="newbiz-stat">
+        <div class="newbiz-label">Responses<br>Received</div>
+        <div class="newbiz-value">0</div>
+        <div class="newbiz-sub">Positive replies</div>
+      </div>
+      <div class="newbiz-stat">
+        <div class="newbiz-label">Meetings<br>Booked</div>
+        <div class="newbiz-value">0</div>
+        <div class="newbiz-sub">Scheduled</div>
+      </div>
+      <div class="newbiz-stat">
+        <div class="newbiz-label">Follow-ups<br>Due</div>
+        <div class="newbiz-value">0</div>
+        <div class="newbiz-sub">This week</div>
+      </div>
+      <div class="newbiz-stat highlight-stat">
+        <div class="newbiz-label">Pipeline<br>Value</div>
+        <div class="newbiz-value">$0</div>
+        <div class="newbiz-sub">Estimated open</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- SNAPSHOT ROW: EA / AI / AGENCY -->
+  <div class="snapshot-row">
+
+    <!-- EA Snapshot -->
+    <div class="snapshot-card">
+      <div class="card-header">📅 Executive Assistant</div>
+      <div class="snapshot-metrics">
+        <div class="snap-stat hl">
+          <div class="snap-label">Meetings This Week</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Scheduled</div>
+        </div>
+        <div class="snap-stat">
+          <div class="snap-label">Meetings Prepped</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Briefs ready</div>
+        </div>
+        <div class="snap-stat">
+          <div class="snap-label">Commitments Outstanding</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Tracked by MAVIS</div>
+        </div>
+        <div class="snap-stat hl">
+          <div class="snap-label">Follow-ups Sent</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">On behalf of Cowley Associates</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI / Automation Snapshot -->
+    <div class="snapshot-card">
+      <div class="card-header">🤖 AI / Automation</div>
+      <div class="snapshot-metrics">
+        <div class="snap-stat hl">
+          <div class="snap-label">Prompts Built</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Library count</div>
+        </div>
+        <div class="snap-stat">
+          <div class="snap-label">Workflows Automated</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Active</div>
+        </div>
+        <div class="snap-stat">
+          <div class="snap-label">Templates Created</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Reusable docs</div>
+        </div>
+        <div class="snap-stat hl">
+          <div class="snap-label">Est. Hours Saved</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">This month</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agency Operations Snapshot -->
+    <div class="snapshot-card">
+      <div class="card-header">🏢 Agency Operations</div>
+      <div class="snapshot-metrics">
+        <div class="snap-stat hl">
+          <div class="snap-label">Open Tasks</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Active</div>
+        </div>
+        <div class="snap-stat">
+          <div class="snap-label">Completed This Week</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Done</div>
+        </div>
+        <div class="snap-stat">
+          <div class="snap-label">Deadlines This Week</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">Upcoming</div>
+        </div>
+        <div class="snap-stat hl">
+          <div class="snap-label">Items Flagged</div>
+          <div class="snap-value">0</div>
+          <div class="snap-sub">At risk / slipping</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- STATS ROW -->
+  <div class="stats-grid">
+    <div class="stat-card highlight">
+      <div class="stat-label">Proposals Outstanding</div>
+      <div class="stat-value">0</div>
+      <div class="stat-sub">Awaiting response</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Outreach Drafts</div>
+      <div class="stat-value">0</div>
+      <div class="stat-sub">Templates in progress</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Automations Built</div>
+      <div class="stat-value">0</div>
+      <div class="stat-sub">Prompt library: setup</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Hours / Week</div>
+      <div class="stat-value">20</div>
+      <div class="stat-sub">Across all 5 pillars</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- PILLARS -->
+    <div class="pillars-card">
+      <div class="card-header">5 Pillars — Phase 1 Focus</div>
+
+      <div class="pillar-row">
+        <div class="pillar-icon">🎯</div>
+        <div class="pillar-info">
+          <div class="pillar-name">New Business Development</div>
+          <div class="pillar-focus">Learning agency voice · Building prospect database</div>
+        </div>
+        <span class="status-pill status-setup">In Setup</span>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-icon">📅</div>
+        <div class="pillar-info">
+          <div class="pillar-name">Executive Assistant</div>
+          <div class="pillar-focus">Calendar & workflows · Task/commitment tracker</div>
+        </div>
+        <span class="status-pill status-setup">In Setup</span>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-icon">🤖</div>
+        <div class="pillar-info">
+          <div class="pillar-name">AI / Automation</div>
+          <div class="pillar-focus">Learning tools · Building prompt library</div>
+        </div>
+        <span class="status-pill status-active">Active</span>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-icon">🏢</div>
+        <div class="pillar-info">
+          <div class="pillar-name">Agency Operations</div>
+          <div class="pillar-focus">Master task list · Agency structure & team</div>
+        </div>
+        <span class="status-pill status-setup">In Setup</span>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-icon">📊</div>
+        <div class="pillar-info">
+          <div class="pillar-name">CEO Dashboard</div>
+          <div class="pillar-focus">Building Monday dashboard template</div>
+        </div>
+        <span class="status-pill status-setup">In Setup</span>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- WEEKLY PRIORITIES -->
+      <div class="priorities-card">
+        <div class="card-header">This Week's Priorities</div>
+        <div class="priority-item">
+          <div class="priority-num">1</div>
+          <div class="priority-text">Define ideal client profile & prospect criteria</div>
+        </div>
+        <div class="priority-item">
+          <div class="priority-num">2</div>
+          <div class="priority-text">Set up calendar access & workflow system</div>
+        </div>
+        <div class="priority-item">
+          <div class="priority-num">3</div>
+          <div class="priority-text">Build initial prospect database (target: 20 names)</div>
+        </div>
+        <div class="priority-item">
+          <div class="priority-num">4</div>
+          <div class="priority-text">Learn agency team structure & active clients</div>
+        </div>
+        <div class="priority-item">
+          <div class="priority-num">5</div>
+          <div class="priority-text">Draft Monday CEO dashboard template</div>
+        </div>
+      </div>
+
+      <!-- INTEGRATIONS -->
+      <div class="integrations-card">
+        <div class="card-header">MAVIS Integration Status</div>
+        <div class="integration-row">
+          <span class="int-name">Gmail</span>
+          <span class="int-status"><span class="int-dot dot-green"></span><span class="text-green">Connected</span></span>
+        </div>
+        <div class="integration-row">
+          <span class="int-name">Google Drive</span>
+          <span class="int-status"><span class="int-dot dot-green"></span><span class="text-green">Connected</span></span>
+        </div>
+        <div class="integration-row">
+          <span class="int-name">LinkedIn</span>
+          <span class="int-status"><span class="int-dot dot-amber"></span><span class="text-amber">Pending</span></span>
+        </div>
+        <div class="integration-row">
+          <span class="int-name">Google Calendar</span>
+          <span class="int-status"><span class="int-dot dot-amber"></span><span class="text-amber">Pending</span></span>
+        </div>
+        <div class="integration-row">
+          <span class="int-name">CRM</span>
+          <span class="int-status"><span class="int-dot dot-gray"></span><span class="text-gray">Not set</span></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Cowley Associates Operations Dashboard &nbsp;·&nbsp; Prepared by MAVIS · Denver's Work Studio
+</footer>
+
+</body>
+</html>
